@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Website reachable? Browser check — Internet from Thailand</title>
+  <meta name="description" content="Try opening a URL from your browser. Explains CORS limits. Does not claim remote Thailand probing." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;560;650;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">Internet from <span>Thailand</span></a>
+      <button class="menu-toggle" type="button" data-menu aria-expanded="false" aria-label="Menu">Menu</button>
+      <nav class="nav-links" data-nav aria-label="Primary"></nav>
+    </div>
+  </header>
+
+  <main>
+    <h1>Website from Thailand?</h1>
+    <p class="lead">
+      Runs in <strong>your</strong> browser — so if you’re in Chiang Rai, this is a “from Thailand” check for you.
+      If you’re elsewhere, it’s a check from <em>your</em> network. We do not claim a remote Thailand probe in v1.
+    </p>
+
+    <!-- AdSense: above tool — insert unit here later -->
+    <div class="ad-slot" aria-hidden="true">Ad placeholder</div>
+
+    <div class="card">
+      <label for="url">URL or domain</label>
+      <div class="row">
+        <input id="url" type="text" inputmode="url" autocomplete="url" placeholder="https://example.com" />
+        <button type="button" id="run">Check</button>
+      </div>
+      <p class="note">
+        Browsers block reading most third-party responses (CORS). We try a few honest methods and explain the result.
+      </p>
+    </div>
+
+    <div id="out" class="result" hidden></div>
+
+    <div class="card">
+      <h2>Limits (read this)</h2>
+      <ul class="note" style="margin:0;padding-left:18px;color:var(--muted)">
+        <li><strong>Not a Thailand VPS.</strong> Traffic leaves your device, not our server.</li>
+        <li><strong>CORS.</strong> A “blocked by browser” result does <em>not</em> mean the site is down.</li>
+        <li><strong>no-cors opaque.</strong> Success only means a network-level request likely completed; we cannot see HTTP status.</li>
+        <li><strong>Optional relay.</strong> If enabled, HTTP status comes from a public CORS proxy’s location — not Thailand and not you. Treat as a hint only.</li>
+      </ul>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="about.html">About</a>
+    </nav>
+    <div>© <span data-year>2026</span> Internet from Thailand</div>
+  </footer>
+  <script src="common.js"></script>
+  <script>
+(function () {
+  var input = document.getElementById("url");
+  var btn = document.getElementById("run");
+  var out = document.getElementById("out");
+
+  function ms(t0) { return Math.round(performance.now() - t0); }
+
+  async function tryCors(url) {
+    var t0 = performance.now();
+    try {
+      var res = await fetch(url.href, {
+        method: "GET",
+        mode: "cors",
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "follow"
+      });
+      return {
+        ok: true,
+        kind: "cors",
+        status: res.status,
+        statusText: res.statusText,
+        redirected: res.redirected,
+        type: res.type,
+        ms: ms(t0)
+      };
+    } catch (e) {
+      return { ok: false, kind: "cors", error: String(e && e.message ? e.message : e), ms: ms(t0) };
+    }
+  }
+
+  async function tryNoCors(url) {
+    var t0 = performance.now();
+    try {
+      var res = await fetch(url.href, {
+        method: "GET",
+        mode: "no-cors",
+        credentials: "omit",
+        cache: "no-store"
+      });
+      // Opaque: status always 0; success means request dispatched without hard network failure.
+      return { ok: true, kind: "no-cors", type: res.type, status: res.status, ms: ms(t0) };
+    } catch (e) {
+      return { ok: false, kind: "no-cors", error: String(e && e.message ? e.message : e), ms: ms(t0) };
+    }
+  }
+
+  // Optional public relay — status is from the proxy, NOT Thailand / NOT the user.
+  // allorigins is free and keyless; it can be slow or rate-limit. Off by default unless user checks.
+  async function tryRelay(url) {
+    var t0 = performance.now();
+    var relay = "https://api.allorigins.win/get?url=" + encodeURIComponent(url.href);
+    try {
+      var res = await fetch(relay, { method: "GET", cache: "no-store" });
+      if (!res.ok) {
+        return { ok: false, kind: "relay", error: "Relay HTTP " + res.status, ms: ms(t0) };
+      }
+      var data = await res.json();
+      return {
+        ok: true,
+        kind: "relay",
+        status: data.status && data.status.http_code,
+        ms: ms(t0),
+        note: "Status via allorigins.win (proxy location — not Thailand, not your ISP)."
+      };
+    } catch (e) {
+      return { ok: false, kind: "relay", error: String(e && e.message ? e.message : e), ms: ms(t0) };
+    }
+  }
+
+  function badge(cls, text) {
+    return '<span class="badge ' + cls + '">' + Ift.escapeHtml(text) + "</span>";
+  }
+
+  function summarize(cors, nocors, relay) {
+    var parts = [];
+    if (cors.ok) {
+      parts.push(badge("ok", "Readable response") + " HTTP " + cors.status + " in " + cors.ms + " ms (CORS allowed).");
+    } else {
+      parts.push(badge("warn", "CORS / blocked read") + " Browser could not expose the response (" + Ift.escapeHtml(cors.error) + "). This is normal for most sites.");
+    }
+    if (nocors.ok) {
+      parts.push(badge("info", "Opaque fetch ok") + " no-cors request finished in " + nocors.ms + " ms (type: " + Ift.escapeHtml(nocors.type || "?") + "). Suggests connectivity at TCP/TLS level, but status is hidden.");
+    } else {
+      parts.push(badge("err", "Network failure?") + " no-cors also failed (" + Ift.escapeHtml(nocors.error) + "). Site may be down, blocking you, DNS failing, or mixed-content issues.");
+    }
+    if (relay) {
+      if (relay.ok) {
+        parts.push(badge("info", "Relay hint") + " HTTP " + (relay.status != null ? relay.status : "?") + " in " + relay.ms + " ms. " + Ift.escapeHtml(relay.note || ""));
+      } else {
+        parts.push(badge("warn", "Relay failed") + " " + Ift.escapeHtml(relay.error) + " — ignore; optional only.");
+      }
+    }
+    return parts.map(function (p) { return "<p style='margin:8px 0'>" + p + "</p>"; }).join("");
+  }
+
+  async function run() {
+    out.hidden = false;
+    out.innerHTML = "Running checks…";
+    btn.disabled = true;
+    try {
+      var url = Ift.normalizeUrl(input.value);
+      input.value = url.href;
+      var useRelay = document.getElementById("useRelay").checked;
+      var cors = await tryCors(url);
+      var nocors = await tryNoCors(url);
+      var relay = useRelay ? await tryRelay(url) : null;
+      out.innerHTML =
+        "<strong>" + Ift.escapeHtml(url.href) + "</strong>" +
+        "<div style='margin-top:10px'>" + summarize(cors, nocors, relay) + "</div>" +
+        "<p class='note'>Checked at " + Ift.escapeHtml(new Date().toLocaleString("en-GB", { timeZone: "Asia/Bangkok" })) + " (Asia/Bangkok wall clock).</p>";
+    } catch (e) {
+      out.innerHTML = badge("err", "Error") + " " + Ift.escapeHtml(e.message || e);
+    } finally {
+      btn.disabled = false;
+    }
+  }
+
+  // Inject optional relay toggle
+  var card = input.closest(".card");
+  var label = document.createElement("label");
+  label.style.marginTop = "12px";
+  label.style.fontWeight = "400";
+  label.innerHTML = '<input type="checkbox" id="useRelay" /> Also try public CORS relay for HTTP status hint (not from Thailand)';
+  card.appendChild(label);
+
+  btn.addEventListener("click", run);
+  input.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") run();
+  });
+})();
+  </script>
+</body>
+</html>

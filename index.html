@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Internet from Thailand — free toolbox for expats &amp; remote workers</title>
+  <meta name="description" content="Lightweight browser tools for people connecting between Thailand and the rest of the world: site checks, approximate speed, DNS lookup, Bangkok–Amsterdam meeting times. No accounts." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;560;650;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">Internet from <span>Thailand</span></a>
+      <button class="menu-toggle" type="button" data-menu aria-expanded="false" aria-label="Menu">Menu</button>
+      <nav class="nav-links" data-nav aria-label="Primary"></nav>
+    </div>
+  </header>
+
+  <main class="wide">
+    <h1>Browser tools for living online from Thailand</h1>
+    <p class="lead">
+      Small, honest utilities for expats, freelancers, and remote teams spanning Southeast Asia and Europe.
+      Everything runs in your browser — no accounts, no sensitive data stored on our servers.
+    </p>
+
+    <!-- AdSense: homepage leaderboard / below-fold card — insert unit here later -->
+    <div class="ad-slot" aria-hidden="true">Ad placeholder — leaderboard</div>
+
+    <div class="card-grid">
+      <a class="tool-card" href="check.html">
+        <div class="icon">🌐</div>
+        <h3>Website from Thailand?</h3>
+        <p>Try reaching a URL from your browser. Honest about CORS and location limits.</p>
+      </a>
+      <a class="tool-card" href="speed.html">
+        <div class="icon">⚡</div>
+        <h3>Approximate speed</h3>
+        <p>Quick client-side download estimate. Labelled approximate — not lab-grade.</p>
+      </a>
+      <a class="tool-card" href="dns.html">
+        <div class="icon">🔎</div>
+        <h3>DNS &amp; IP lookup</h3>
+        <p>Public A / AAAA / MX / NS / TXT via Cloudflare DNS-over-HTTPS.</p>
+      </a>
+      <a class="tool-card" href="timezone.html">
+        <div class="icon">🕐</div>
+        <h3>Bangkok ↔ Amsterdam</h3>
+        <p>Live clocks and a meeting-overlap helper for NL–TH collaboration.</p>
+      </a>
+    </div>
+
+    <div class="card">
+      <h2>What this is (and isn’t)</h2>
+      <p>
+        Built as a low-effort public toolbox from Chiang Rai. Tools run <strong>in your browser</strong>
+        (or via public DNS APIs). They do <strong>not</strong> probe the internet from a Thailand VPS
+        unless we add that later and say so clearly.
+      </p>
+      <p class="note">
+        No finance, tax, or medical advice. No tracking beyond optional AdSense (placeholders only in this v1).
+        See <a href="privacy.html">Privacy</a> and <a href="about.html">About</a>.
+      </p>
+    </div>
+
+    <!-- AdSense: in-content rectangle — insert unit here later -->
+    <div class="ad-slot" aria-hidden="true">Ad placeholder — in-content</div>
+  </main>
+
+  <footer class="site-footer">
+    <nav>
+      <a href="about.html">About</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="check.html">Site check</a>
+      <a href="speed.html">Speed</a>
+      <a href="dns.html">DNS</a>
+      <a href="timezone.html">Timezones</a>
+    </nav>
+    <div>© <span data-year>2026</span> Internet from Thailand — static tools, made for humans.</div>
+  </footer>
+  <script src="common.js"></script>
+</body>
+</html>

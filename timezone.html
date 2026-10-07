@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bangkok ↔ Amsterdam meeting times — Internet from Thailand</title>
+  <meta name="description" content="Live Bangkok and Amsterdam clocks plus a simple meeting overlap helper for NL–TH collaboration." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;560;650;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">Internet from <span>Thailand</span></a>
+      <button class="menu-toggle" type="button" data-menu aria-expanded="false" aria-label="Menu">Menu</button>
+      <nav class="nav-links" data-nav aria-label="Primary"></nav>
+    </div>
+  </header>
+
+  <main>
+    <h1>Bangkok ↔ Amsterdam</h1>
+    <p class="lead">
+      Live clocks for Asia/Bangkok (ICT, UTC+7, no DST) and Europe/Amsterdam (CET/CEST).
+      Plus a quick “whose working hours overlap?” helper. Not calendar sync — just planning.
+    </p>
+
+    <!-- AdSense: above clocks — insert unit here later -->
+    <div class="ad-slot" aria-hidden="true">Ad placeholder</div>
+
+    <div class="clocks">
+      <div class="card clock-face">
+        <div class="city">Chiang Rai / Bangkok · ICT</div>
+        <div class="time" id="bkk-time">--:--:--</div>
+        <div class="date" id="bkk-date">—</div>
+      </div>
+      <div class="card clock-face">
+        <div class="city">Amsterdam · local</div>
+        <div class="time" id="ams-time">--:--:--</div>
+        <div class="date" id="ams-date">—</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Meeting overlap helper</h2>
+      <p class="note" style="margin-top:0">
+        Default office hours: Bangkok 09:00–18:00, Amsterdam 09:00–17:30. Adjust to taste.
+        Overlap is computed for <strong>today</strong> in both zones (handles DST on the NL side).
+      </p>
+      <div class="row" style="margin-bottom:8px">
+        <div style="flex:1;min-width:140px">
+          <label for="bkk-start">Bangkok start</label>
+          <input id="bkk-start" type="text" value="09:00" />
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label for="bkk-end">Bangkok end</label>
+          <input id="bkk-end" type="text" value="18:00" />
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:8px">
+        <div style="flex:1;min-width:140px">
+          <label for="ams-start">Amsterdam start</label>
+          <input id="ams-start" type="text" value="09:00" />
+        </div>
+        <div style="flex:1;min-width:140px">
+          <label for="ams-end">Amsterdam end</label>
+          <input id="ams-end" type="text" value="17:30" />
+        </div>
+      </div>
+      <button type="button" id="calc">Find overlap</button>
+      <div id="overlap" class="result" style="margin-top:12px" hidden></div>
+    </div>
+
+    <div class="card">
+      <h2>Convert one time</h2>
+      <div class="row">
+        <select id="from-zone" style="flex:0 0 auto">
+          <option value="Asia/Bangkok">Bangkok</option>
+          <option value="Europe/Amsterdam">Amsterdam</option>
+        </select>
+        <input id="one-time" type="text" value="10:00" placeholder="HH:MM" style="flex:0 0 100px" />
+        <button type="button" id="convert" class="secondary">Convert</button>
+      </div>
+      <div id="converted" class="result" style="margin-top:12px" hidden></div>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <div>© <span data-year>2026</span> Internet from Thailand</div>
+  </footer>
+  <script src="common.js"></script>
+  <script>
+(function () {
+  var BKK = "Asia/Bangkok";
+  var AMS = "Europe/Amsterdam";
+
+  function fmt(zone, opts) {
+    return new Intl.DateTimeFormat("en-GB", Object.assign({ timeZone: zone }, opts));
+  }
+
+  function tick() {
+    var now = new Date();
+    document.getElementById("bkk-time").textContent = fmt(BKK, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now);
+    document.getElementById("ams-time").textContent = fmt(AMS, { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false }).format(now);
+    document.getElementById("bkk-date").textContent = fmt(BKK, { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(now);
+    document.getElementById("ams-date").textContent = fmt(AMS, { weekday: "short", day: "numeric", month: "short", year: "numeric" }).format(now) +
+      " · " + fmt(AMS, { timeZoneName: "short" }).formatToParts(now).filter(function (p) { return p.type === "timeZoneName"; }).map(function (p) { return p.value; }).join("");
+  }
+
+  function parseHHMM(s) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(s).trim());
+    if (!m) throw new Error("Use HH:MM (24h), e.g. 09:30");
+    var h = parseInt(m[1], 10), min = parseInt(m[2], 10);
+    if (h > 23 || min > 59) throw new Error("Invalid time");
+    return h * 60 + min;
+  }
+
+  // Get "wall clock" Y-M-D in a zone for an instant
+  function ymdInZone(date, zone) {
+    var parts = fmt(zone, { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+    var map = {};
+    parts.forEach(function (p) { map[p.type] = p.value; });
+    return map.year + "-" + map.month + "-" + map.day;
+  }
+
+  // Convert a zone-local civil time (on "today" in that zone) to a UTC epoch ms
+  function zonedLocalToUtcMs(zone, ymd, minutes) {
+    var bits = ymd.split("-");
+    var y = parseInt(bits[0], 10), mo = parseInt(bits[1], 10), d = parseInt(bits[2], 10);
+    var h = Math.floor(minutes / 60), mi = minutes % 60;
+    // Iterate: guess UTC, read back wall time in zone, adjust
+    var guess = Date.UTC(y, mo - 1, d, h, mi, 0);
+    for (var i = 0; i < 3; i++) {
+      var back = fmt(zone, {
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false
+      }).formatToParts(new Date(guess));
+      var m = {};
+      back.forEach(function (p) { m[p.type] = p.value; });
+      var asUtc = Date.UTC(+m.year, +m.month - 1, +m.day, +m.hour, +m.minute, +m.second);
+      var want = Date.UTC(y, mo - 1, d, h, mi, 0);
+      guess += want - asUtc;
+    }
+    return guess;
+  }
+
+  function formatIn(zone, ms) {
+    return fmt(zone, { hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(ms));
+  }
+
+  function calcOverlap() {
+    var box = document.getElementById("overlap");
+    box.hidden = false;
+    try {
+      var b0 = parseHHMM(document.getElementById("bkk-start").value);
+      var b1 = parseHHMM(document.getElementById("bkk-end").value);
+      var a0 = parseHHMM(document.getElementById("ams-start").value);
+      var a1 = parseHHMM(document.getElementById("ams-end").value);
+      if (b1 <= b0 || a1 <= a0) throw new Error("End must be after start (same-day windows only).");
+
+      var now = new Date();
+      var bkkDay = ymdInZone(now, BKK);
+      var amsDay = ymdInZone(now, AMS);
+
+      var bStart = zonedLocalToUtcMs(BKK, bkkDay, b0);
+      var bEnd = zonedLocalToUtcMs(BKK, bkkDay, b1);
+      var aStart = zonedLocalToUtcMs(AMS, amsDay, a0);
+      var aEnd = zonedLocalToUtcMs(AMS, amsDay, a1);
+
+      var start = Math.max(bStart, aStart);
+      var end = Math.min(bEnd, aEnd);
+
+      // Persist prefs
+      try {
+        localStorage.setItem("ift_tz_prefs", JSON.stringify({
+          bkkStart: document.getElementById("bkk-start").value,
+          bkkEnd: document.getElementById("bkk-end").value,
+          amsStart: document.getElementById("ams-start").value,
+          amsEnd: document.getElementById("ams-end").value
+        }));
+      } catch (ignore) {}
+
+      if (end <= start) {
+        box.innerHTML = '<span class="badge warn">No overlap today</span> With these hours, Bangkok and Amsterdam working windows do not overlap on today’s calendar dates.';
+        return;
+      }
+      var mins = Math.round((end - start) / 60000);
+      box.innerHTML =
+        '<span class="badge ok">Overlap</span> <strong>' + mins + " minutes</strong><br>" +
+        "Bangkok: <span class='mono'>" + Ift.escapeHtml(formatIn(BKK, start) + "–" + formatIn(BKK, end)) + "</span><br>" +
+        "Amsterdam: <span class='mono'>" + Ift.escapeHtml(formatIn(AMS, start) + "–" + formatIn(AMS, end)) + "</span>" +
+        "<p class='note'>Tip: late morning NL ≈ late afternoon TH. Early TH mornings are still evening/night in NL.</p>";
+    } catch (e) {
+      box.innerHTML = '<span class="badge err">Error</span> ' + Ift.escapeHtml(e.message || e);
+    }
+  }
+
+  function convertOne() {
+    var box = document.getElementById("converted");
+    box.hidden = false;
+    try {
+      var mins = parseHHMM(document.getElementById("one-time").value);
+      var from = document.getElementById("from-zone").value;
+      var to = from === BKK ? AMS : BKK;
+      var day = ymdInZone(new Date(), from);
+      var ms = zonedLocalToUtcMs(from, day, mins);
+      box.innerHTML =
+        '<span class="mono">' + Ift.escapeHtml(document.getElementById("one-time").value) + "</span> in " +
+        Ift.escapeHtml(from === BKK ? "Bangkok" : "Amsterdam") + " → <strong>" +
+        Ift.escapeHtml(formatIn(to, ms)) + "</strong> in " +
+        Ift.escapeHtml(to === BKK ? "Bangkok" : "Amsterdam") +
+        " <span class='note'>(using today’s date in the source zone)</span>";
+    } catch (e) {
+      box.innerHTML = '<span class="badge err">Error</span> ' + Ift.escapeHtml(e.message || e);
+    }
+  }
+
+  try {
+    var prefs = JSON.parse(localStorage.getItem("ift_tz_prefs") || "null");
+    if (prefs) {
+      if (prefs.bkkStart) document.getElementById("bkk-start").value = prefs.bkkStart;
+      if (prefs.bkkEnd) document.getElementById("bkk-end").value = prefs.bkkEnd;
+      if (prefs.amsStart) document.getElementById("ams-start").value = prefs.amsStart;
+      if (prefs.amsEnd) document.getElementById("ams-end").value = prefs.amsEnd;
+    }
+  } catch (ignore) {}
+
+  document.getElementById("calc").addEventListener("click", calcOverlap);
+  document.getElementById("convert").addEventListener("click", convertOne);
+  tick();
+  setInterval(tick, 1000);
+  calcOverlap();
+})();
+  </script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>About — Internet from Thailand</title>
+  <meta name="description" content="Who built Internet from Thailand, why it exists, and what the tools honestly do." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;560;650;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">Internet from <span>Thailand</span></a>
+      <button class="menu-toggle" type="button" data-menu aria-expanded="false" aria-label="Menu">Menu</button>
+      <nav class="nav-links" data-nav aria-label="Primary"></nav>
+    </div>
+  </header>
+
+  <main>
+    <h1>About</h1>
+    <p class="lead">A small static toolbox for people who live or work between Thailand and elsewhere.</p>
+
+    <div class="card">
+      <h2>The idea</h2>
+      <p>
+        Jan is Dutch, based in Chiang Rai. This site is a low-effort side project: useful micro-tools,
+        clean pages, and room for AdSense later — without accounts, apps, or high-liability topics.
+      </p>
+      <p>
+        Stack preference: single-purpose HTML, vanilla JavaScript, localStorage when useful, CSV if exports appear.
+        No frameworks unless asked.
+      </p>
+    </div>
+
+    <div class="card">
+      <h2>Honesty policy</h2>
+      <ul>
+        <li>Client-side checks reflect <em>your</em> network and browser, not a Thailand data centre — unless we ship a real remote probe and label it.</li>
+        <li>Speed numbers are approximate.</li>
+        <li>DNS data comes from public DNS-over-HTTPS (Cloudflare) — public records only.</li>
+        <li>No finance, tax, legal, or medical advice.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Contact</h2>
+      <p class="note">Add an email or social link here when you publish. v1 ships without a contact form (spam magnet).</p>
+    </div>
+
+    <!-- AdSense: about sidebar/footer — insert unit here later -->
+    <div class="ad-slot" aria-hidden="true">Ad placeholder</div>
+  </main>
+
+  <footer class="site-footer">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <div>© <span data-year>2026</span> Internet from Thailand</div>
+  </footer>
+  <script src="common.js"></script>
+</body>
+</html>

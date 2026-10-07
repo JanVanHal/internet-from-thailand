@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Approximate download speed test — Internet from Thailand</title>
+  <meta name="description" content="Client-side approximate download speed estimate. Not a lab-grade ISP test. Runs in your browser." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;560;650;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="nav-inner">
+      <a class="brand" href="index.html">Internet from <span>Thailand</span></a>
+      <button class="menu-toggle" type="button" data-menu aria-expanded="false" aria-label="Menu">Menu</button>
+      <nav class="nav-links" data-nav aria-label="Primary"></nav>
+    </div>
+  </header>
+
+  <main>
+    <h1>Approximate speed test</h1>
+    <p class="lead">
+      Downloads sample data in your browser and estimates Mbps. Results vary with CDN path, Wi‑Fi, VPN, and cache —
+      treat as a rough check, not a regulated measurement.
+    </p>
+
+    <!-- AdSense: above tool — insert unit here later -->
+    <div class="ad-slot" aria-hidden="true">Ad placeholder</div>
+
+    <div class="card">
+      <label for="size">Download size</label>
+      <div class="row">
+        <select id="size">
+          <option value="1000000">1 MB</option>
+          <option value="5000000" selected>5 MB</option>
+          <option value="10000000">10 MB</option>
+          <option value="25000000">25 MB</option>
+        </select>
+        <button type="button" id="run">Start</button>
+        <button type="button" id="stop" class="secondary" disabled>Stop</button>
+      </div>
+      <div class="meter" aria-hidden="true"><span id="bar"></span></div>
+      <div id="live" class="note">Ready.</div>
+    </div>
+
+    <div id="out" class="result" hidden></div>
+
+    <div class="card">
+      <h2>How it works</h2>
+      <p class="note" style="margin:0">
+        Prefers Cloudflare’s public <span class="mono">speed.cloudflare.com/__down</span> endpoint when CORS allows.
+        Falls back to fetching a public jsDelivr file multiple times if needed. No upload test in v1.
+        Your ISP speed page or a dedicated app will be more accurate for disputes.
+      </p>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="privacy.html">Privacy</a>
+    </nav>
+    <div>© <span data-year>2026</span> Internet from Thailand</div>
+  </footer>
+  <script src="common.js"></script>
+  <script>
+(function () {
+  var runBtn = document.getElementById("run");
+  var stopBtn = document.getElementById("stop");
+  var sizeSel = document.getElementById("size");
+  var bar = document.getElementById("bar");
+  var live = document.getElementById("live");
+  var out = document.getElementById("out");
+  var abort = null;
+
+  function mbps(bytes, seconds) {
+    if (seconds <= 0) return 0;
+    return (bytes * 8) / seconds / 1e6;
+  }
+
+  async function downloadCloudflare(bytes, signal, onProgress) {
+    var url = "https://speed.cloudflare.com/__down?bytes=" + bytes + "&bust=" + Date.now();
+    var t0 = performance.now();
+    var res = await fetch(url, { cache: "no-store", credentials: "omit", signal: signal });
+    if (!res.ok) throw new Error("Cloudflare speed endpoint HTTP " + res.status);
+    if (!res.body || !res.body.getReader) {
+      var buf = await res.arrayBuffer();
+      onProgress(buf.byteLength, buf.byteLength, (performance.now() - t0) / 1000);
+      return { bytes: buf.byteLength, seconds: (performance.now() - t0) / 1000, source: "cloudflare" };
+    }
+    var reader = res.body.getReader();
+    var received = 0;
+    while (true) {
+      var chunk = await reader.read();
+      if (chunk.done) break;
+      received += chunk.value.byteLength;
+      onProgress(received, bytes, (performance.now() - t0) / 1000);
+    }
+    return { bytes: received, seconds: (performance.now() - t0) / 1000, source: "cloudflare" };
+  }
+
+  // Fallback: known public file (~87KB jquery) fetched repeatedly — approximate only
+  async function downloadFallback(targetBytes, signal, onProgress) {
+    var fileUrl = "https://cdn.jsdelivr.net/npm/jquery@3.7.1/dist/jquery.min.js";
+    var t0 = performance.now();
+    var received = 0;
+    var guard = 0;
+    while (received < targetBytes && guard < 400) {
+      guard++;
+      var res = await fetch(fileUrl + "?n=" + Date.now() + "-" + guard, {
+        cache: "no-store",
+        credentials: "omit",
+        signal: signal
+      });
+      if (!res.ok) throw new Error("Fallback CDN HTTP " + res.status);
+      var buf = await res.arrayBuffer();
+      received += buf.byteLength;
+      onProgress(Math.min(received, targetBytes), targetBytes, (performance.now() - t0) / 1000);
+    }
+    return { bytes: received, seconds: (performance.now() - t0) / 1000, source: "jsdelivr-fallback" };
+  }
+
+  async function run() {
+    out.hidden = true;
+    runBtn.disabled = true;
+    stopBtn.disabled = false;
+    bar.style.width = "0%";
+    live.textContent = "Starting…";
+    abort = new AbortController();
+    var target = parseInt(sizeSel.value, 10);
+
+    function onProgress(got, total, seconds) {
+      var pct = Math.min(100, Math.round((got / total) * 100));
+      bar.style.width = pct + "%";
+      live.textContent =
+        "Downloaded ~" + (got / 1e6).toFixed(2) + " MB in " + seconds.toFixed(1) + "s → ~" +
+        mbps(got, seconds).toFixed(1) + " Mbps (approx)";
+    }
+
+    try {
+      var result;
+      try {
+        result = await downloadCloudflare(target, abort.signal, onProgress);
+      } catch (e) {
+        if (abort.signal.aborted) throw e;
+        live.textContent = "Cloudflare endpoint unavailable (" + (e.message || e) + "). Trying fallback…";
+        result = await downloadFallback(target, abort.signal, onProgress);
+      }
+      var speed = mbps(result.bytes, result.seconds);
+      bar.style.width = "100%";
+      out.hidden = false;
+      out.innerHTML =
+        '<div class="big-stat">' + speed.toFixed(1) + " <small>Mbps approx</small></div>" +
+        "<p><span class=\"badge info\">Approximate</span> " +
+        Ift.escapeHtml((result.bytes / 1e6).toFixed(2) + " MB in " + result.seconds.toFixed(2) + "s via " + result.source) +
+        "</p>" +
+        "<p class=\"note\">Not for ISP disputes. VPN, peak hours, and Wi‑Fi congestion change results a lot.</p>";
+      live.textContent = "Done.";
+      try {
+        localStorage.setItem("ift_last_speed", JSON.stringify({
+          mbps: speed, bytes: result.bytes, seconds: result.seconds, source: result.source, at: Date.now()
+        }));
+      } catch (ignore) {}
+    } catch (e) {
+      if (abort && abort.signal.aborted) {
+        live.textContent = "Stopped.";
+      } else {
+        live.textContent = "Failed.";
+        out.hidden = false;
+        out.innerHTML = '<span class="badge err">Error</span> ' + Ift.escapeHtml(e.message || e);
+      }
+    } finally {
+      runBtn.disabled = false;
+      stopBtn.disabled = true;
+      abort = null;
+    }
+  }
+
+  runBtn.addEventListener("click", run);
+  stopBtn.addEventListener("click", function () {
+    if (abort) abort.abort();
+  });
+})();
+  </script>
+</body>
+</html>
