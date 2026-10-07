@@ -31,7 +31,7 @@
 
 ## Content / SEO notes (low liability)
 
-- Target: expats, Dutch remote workers, freelancers in Chiang Mai / Chiang Rai / Bangkok, NL–TH teams.
+- Target: expats, Dutch remote workers, freelancers in Thailand and NL–TH teams
 - Keywords to lean on: Thailand internet speed, Bangkok Amsterdam time, DNS lookup, website reachable, ICT timezone.
 - Avoid: tax, banking, medical, “guaranteed unblock”, VPN cure-alls as medical/legal claims.
 - Affiliate later (VPN/eSIM) only with clear “we may earn a commission” — not in v1.
